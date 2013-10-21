@@ -34,7 +34,7 @@ class ThinkingSphinx::ActiveRecord::Attribute::Type
       klass = model
       attribute.columns.first.__stack.collect { |name|
         association = klass.reflect_on_association(name)
-        klass       = association.klass
+        klass = association.klass
         association
       }
     end
@@ -51,29 +51,40 @@ class ThinkingSphinx::ActiveRecord::Attribute::Type
   end
 
   def single_column_reference?
-    attribute.columns.length == 1               &&
-    attribute.columns.first.__stack.length == 0 &&
-    !attribute.columns.first.string?
+    attribute.columns.length == 1 &&
+        attribute.columns.first.__stack.length == 0 &&
+        !attribute.columns.first.string?
   end
 
   def type_from_database
+
+    # attribute.columns.first.__name returns sometimes 'Classname'
+
     db_column = klass.columns.detect { |db_column|
       db_column.name == attribute.columns.first.__name.to_s
     }
 
-    if db_column.type == :integer && db_column.sql_type[/bigint/i]
-      return :bigint
+    if !db_column.nil?
+
+      if db_column.type == :integer && db_column.sql_type[/bigint/i]
+        return :bigint
+      end
+
+      case db_column.type
+      when :datetime, :date
+        :timestamp
+      when :text
+        :string
+      when :decimal
+        :float
+      else
+        db_column.type
+      end
+
+    else
+      nil
     end
 
-    case db_column.type
-    when :datetime, :date
-      :timestamp
-    when :text
-      :string
-    when :decimal
-      :float
-    else
-      db_column.type
-    end
   end
+
 end
